@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="sass/main.scss" />
+    <script src="script.js" type="module"></script>
+
+    <script
+      type="module"
+      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"
+    ></script>
+    <title>Test</title>
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div class="profile_info">
+          <div class="profile_info_img_container">
+            <img
+              src="https://randomuser.me/api/portraits/men/99.jpg"
+              alt=""
+              class="profile_img"
+            />
+          </div>
+          <div class="profile_info_description">
+            <div class="profile_name">Test_name</div>
+            <div class="profile_email">Test_email</div>
+            <div class="profile_phone_no">Test_phone</div>
+            <div class="profile_username">Test_username</div>
+          </div>
+        </div>
+
+        <ul class="tabs">
+          <li class="tab_item active" data-index="0">Profile</li>
+          <li class="tab_item" data-index="1">University</li>
+        </ul>
+      </header>
+
+      <main class="tabs_content">
+        <section class="tab__content">
+          <div class="profile">
+            <p><span> Name: </span></p>
+            <p><span> Email: </span></p>
+            <p><span> DOB: </span></p>
+            <p><span> AGE: </span></p>
+            <p><span> City: </span></p>
+            <p><span> State: </span></p>
+            <p><span> Country: </span></p>
+            <p><span> Gender: </span></p>
+            <p><span> Phone: </span></p>
+            <p><span> Cell: </span></p>
+          </div>
+        </section>
+
+        <section class="tab__content">
+          <div class="universities">
+            <div class="functions">
+              <div class="search">
+                <input
+                  type="search"
+                  class="search_input"
+                  list="university-list"
+                />
+              </div>
+              <div class="sort_uni">
+                Sort Univerities
+                <ion-icon name="arrow-up-outline"></ion-icon>
+                <ion-icon name="arrow-down-outline"></ion-icon>
+              </div>
+
+              <ul class="university-list">
+                <li class="university">
+                  <p class="university_name"></p>
+                  <span>Webpage: </span>
+                  <a href="#" class="university_webpage"></a>
+                </li>
+              </ul>
+
+              <div class="pagination">
+                <button class="btn btn--prev">&larr; Prev</button>
+                <button class="btn btn--next">Next &rarr;</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
