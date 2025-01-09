@@ -1,0 +1,29 @@
+.header {
+  background-color: #fff;
+  box-shadow: 0 0.5rem 0.75rem rgba(#000, 0.1);
+}
+
+.brief {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 2rem;
+  row-gap: 0.6rem;
+  align-items: center;
+  padding: 2.4rem 2.4rem 1.2rem 2.4rem;
+
+  &__img {
+    grid-row: span 4;
+    height: 12rem;
+    width: 9rem;
+    border-radius: 1.2rem;
+    object-fit: cover;
+    object-position: center;
+  }
+  &__name {
+    font-weight: 700;
+    font-size: 1.8rem;
+  }
+  span {
+    font-weight: 600;
+  }
+}

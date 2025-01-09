@@ -1,13 +1,50 @@
-body {
-  background-color: lightblue;
-}
-
-* {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
 html {
+  box-sizing: border-box;
   font-size: 62.5%;
+}
+
+body {
+  font-family: sans-serif;
+  font-size: 1.6rem;
+  color: #333;
+  background-color: #eee;
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 60rem;
+  height: 100svh;
+  display: grid;
+  grid-template-rows: max-content 1fr;
+  box-shadow: 0 2rem 4rem rgba(#000, 0.2);
+}
+
+.loader {
+  width: 3.6rem;
+  height: 3.6rem;
+  border: 5px solid #000;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
