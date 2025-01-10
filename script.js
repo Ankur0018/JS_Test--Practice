@@ -30,6 +30,8 @@ const config = {
 };
 
 const data = {};
+data.sortAscending = true;
+
 const timeout_sec = 10;
 
 const brief = document.querySelector(".brief");
@@ -57,7 +59,11 @@ const getJSON = async function (url) {
 };
 
 const renderSpinner = function (parentEl) {
-  const markup = `<div class="loader"></div>`;
+  const markup = `
+    <div class="loader__container">
+      <div class="loader"></div>
+    </div>
+  `;
   parentEl.innerHTML = "";
   parentEl.insertAdjacentHTML("afterbegin", markup);
 };
@@ -131,6 +137,8 @@ const switchTab = async function (e) {
 const renderContent = async function (tabIndex) {
   renderSpinner(tabContent);
 
+  tabContent.className = "tab__content";
+
   if (tabIndex === 0) {
     tabContent.classList.add("profile_content");
 
@@ -152,33 +160,182 @@ const renderContent = async function (tabIndex) {
       const universityApi = `http://universities.hipolabs.com/search?country=${country}`;
       const universityData = await getJSON(universityApi);
 
-      tabContent.classList.add("university_content");
+      tabContent.classList.add("university__content");
 
-      const universityMarkup = `
-        <h2>Universities in ${country}</h2>
-        <div class="search">
-          <input type="search" class="search-input" placeholder="Search universities..." />
-        </div>
-        <ul class="university-list">
-          ${universityData
-            .slice(0, 10)
-            .map(
-              (uni) => `
-            <li class="university">
-              <p class="university__name">${uni.name}</p>
-              <span>Webpage: </span>
-              <a href="${uni.web_pages[0]}" target="_blank" class="university__webpage">${uni.web_pages[0]}</a>
-            </li>
-          `
-            )
-            .join("")}
-        </ul>
-      `;
-      tabContent.innerHTML = universityMarkup;
+      // Save full university list and initialize state
+      data.universities = universityData;
+      data.filteredUniversities = universityData;
+      data.currentPage = 1;
+      data.itemsPerPage = 10;
+
+      tabContent.innerHTML = `
+
+      <h2>Universities in ${data.profileInfo.country}</h2>
+      <div class="university-controls">
+        <input type="search" class="search-input" placeholder="Search universities..." />
+        <button class="btn btn--sort">Sort A-Z</button>
+      </div>
+      <div class="university-table-container"></div>
+    `;
+
+      // Rendering Paginated Universities
+      renderPaginatedUniversities();
     } catch (err) {
       tabContent.innerHTML = `<p>Error loading universities: ${err.message}</p>`;
     }
+  } else if (tabIndex === 2 || tabIndex === 3) {
+    tabContent.classList.add("placeholder__content");
+    tabContent.innerHTML = `
+      <h2>Coming Soon!</h2>
+      <p>Content for this tab will be added soon. Stay tuned!</p>
+    `;
   }
+};
+
+const renderPaginatedUniversities = function () {
+  const start = (data.currentPage - 1) * data.itemsPerPage;
+  const end = start + data.itemsPerPage;
+  const universitiesSliced = data.filteredUniversities.slice(start, end);
+  const maxPage = Math.ceil(
+    data.filteredUniversities.length / data.itemsPerPage
+  );
+
+  // Rendering specific quantity of university in table
+  renderUniversityTable(universitiesSliced);
+
+  // Updated button states
+  document.querySelector(".btn--prev").disabled = data.currentPage == 1;
+  document.querySelector(".btn--first").disabled = data.currentPage == 1;
+  document.querySelector(".btn--next").disabled = data.currentPage == maxPage;
+  document.querySelector(".btn--last").disabled = data.currentPage == maxPage;
+
+  // University_content event listeners
+  attachUniversityEventListeners();
+};
+
+const renderUniversityTable = function (universities) {
+  const totalPages = Math.ceil(
+    data.filteredUniversities.length / data.itemsPerPage
+  );
+
+  const tableMarkup = universities.length
+    ? `
+      <div class="table-wrapper">
+        <table class="university-table">
+          <thead>
+            <tr>
+              <th>University Name</th>
+              <th>Website</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${universities
+              .map(
+                (uni) => `
+                <tr>
+                  <td>${uni.name}</td>
+                  <td><a href="${uni.web_pages[0]}" target="_blank">${uni.web_pages[0]}</a></td>
+                </tr>
+              `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button class="btn btn--first" disabled>&laquo; First</button>
+        <button class="btn btn--prev" disabled>&larr; Prev</button>
+        <span class="page_count"> Page ${
+          data.currentPage
+        } / ${totalPages} </span>
+        <button class="btn btn--next">Next &rarr;</button>
+        <button class="btn btn--last">Last &raquo;</button>
+      </div>
+    `
+    : `<p class="no-results">No universities found matching your search.</p>`;
+
+  const tableContainer = document.querySelector(".university-table-container");
+  tableContainer.innerHTML = tableMarkup;
+};
+
+const attachUniversityEventListeners = function () {
+  const sortButton = document.querySelector(".btn--sort");
+  const prevButton = document.querySelector(".btn--prev");
+  const nextButton = document.querySelector(".btn--next");
+  const firstButton = document.querySelector(".btn--first");
+  const lastButton = document.querySelector(".btn--last");
+  const searchInput = document.querySelector(".search-input");
+
+  const maxPage = Math.ceil(
+    data.filteredUniversities.length / data.itemsPerPage
+  );
+
+  // Search functionality
+  searchInput.addEventListener("input", function () {
+    const query = searchInput.value.toLowerCase();
+    data.filteredUniversities = data.universities.filter((uni) =>
+      uni.name.toLowerCase().includes(query)
+    );
+    data.currentPage = 1; // Reset to first page after search
+    renderPaginatedUniversities();
+  });
+
+  // Previous button
+  prevButton.addEventListener("click", function () {
+    if (data.currentPage > 1) {
+      data.currentPage--;
+      renderPaginatedUniversities();
+    }
+  });
+
+  // Next button
+  nextButton.addEventListener("click", function () {
+    if (data.currentPage < maxPage) {
+      data.currentPage++;
+      renderPaginatedUniversities();
+    }
+  });
+
+  // First page button
+  firstButton.addEventListener("click", function () {
+    if (data.currentPage !== 1) {
+      data.currentPage = 1;
+      renderPaginatedUniversities();
+    }
+  });
+
+  // Last page button
+  lastButton.addEventListener("click", function () {
+    if (data.currentPage !== maxPage) {
+      data.currentPage = maxPage;
+      renderPaginatedUniversities();
+    }
+  });
+
+  // Sort Universities
+
+  const sortUniversities = function () {
+    data.filteredUniversities.sort((a, b) => {
+      if (a.name.toLowerCase() < b.name.toLowerCase())
+        return data.sortAscending ? -1 : 1;
+      if (a.name.toLowerCase() > b.name.toLowerCase())
+        return data.sortAscending ? 1 : -1;
+      return 0;
+    });
+
+    data.sortAscending = !data.sortAscending; // Toggle the sort order
+
+    document.querySelector(".btn--sort").textContent = data.sortAscending
+      ? "Sort A-Z"
+      : "Sort Z-A";
+
+    data.currentPage = 1;
+    renderPaginatedUniversities();
+  };
+
+  sortButton.addEventListener("click", function () {
+    sortUniversities();
+  });
 };
 
 const init = async function () {
