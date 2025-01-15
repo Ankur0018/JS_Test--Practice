@@ -25,6 +25,10 @@ const config = {
     },
     {
       name: "tab-4",
+      api: "https://randomuser.me/api/",
+    },
+    {
+      name: "tab-5",
     },
   ],
 };
@@ -134,15 +138,10 @@ const switchTab = async function (e) {
   await renderContent(tabIndex);
 };
 
-const renderContent = async function (tabIndex) {
-  renderSpinner(tabContent);
+const renderProfileContent = function () {
+  tabContent.classList.add("profile_content");
 
-  tabContent.className = "tab__content";
-
-  if (tabIndex === 0) {
-    tabContent.classList.add("profile_content");
-
-    const profileMarkup = `
+  const profileMarkup = `
       <h2>Profile Details</h2>
       <p><span>Name:</span> ${data.profileInfo.name}</p>
       <p><span>Email:</span> ${data.profileInfo.email}</p>
@@ -153,42 +152,70 @@ const renderContent = async function (tabIndex) {
       <p><span>Date of Birth:</span> ${data.profileInfo.dob}</p>
       <p><span>Address:</span> ${data.profileInfo.address}</p>
     `;
-    tabContent.innerHTML = profileMarkup;
-  } else if (tabIndex === 1) {
+  tabContent.innerHTML = profileMarkup;
+};
+
+const renderDynamicContent = function (apiData) {
+  if (Array.isArray(apiData)) {
+    const listItems = apiData
+      .map(
+        (item) => `
+          <div class="dynamic-item">
+            <h3>${item.name || "Unnamed"}</h3>
+            <p>${item.description || JSON.stringify(item)}</p>
+          </div>
+        `
+      )
+      .join("");
+    tabContent.innerHTML = `<div class="dynamic-list">${listItems}</div>`;
+  } else {
+    tabContent.innerHTML = `<pre>${JSON.stringify(apiData, null, 2)}</pre>`;
+  }
+};
+
+const renderContent = async function (tabIndex) {
+  const selectedTab = config.tabs[tabIndex];
+  renderSpinner(tabContent);
+
+  if (selectedTab.api) {
+    const apiUrl = selectedTab.api;
+
     try {
-      const country = data.profileInfo.country;
-      const universityApi = `http://universities.hipolabs.com/search?country=${country}`;
-      const universityData = await getJSON(universityApi);
+      let apiData = await getJSON(apiUrl);
 
-      tabContent.classList.add("university__content");
+      if (tabIndex === 1) {
+        const apiUrl = selectedTab.api.replace(
+          "SELECTED_USER_COUNTRY",
+          data.profileInfo.country
+        );
 
-      // Save full university list and initialize state
-      data.universities = universityData;
-      data.filteredUniversities = universityData;
-      data.currentPage = 1;
-      data.itemsPerPage = 10;
+        apiData = await getJSON(apiUrl);
 
-      tabContent.innerHTML = `
+        // University-specific rendering
+        data.universities = apiData;
+        data.filteredUniversities = apiData;
+        data.currentPage = 1;
+        data.itemsPerPage = 10;
 
-      <h2>Universities in ${data.profileInfo.country}</h2>
-      <div class="university-controls">
-        <input type="search" class="search-input" placeholder="Search universities..." />
-        <button class="btn btn--sort">Sort A-Z</button>
-      </div>
-      <div class="university-table-container"></div>
-    `;
-
-      // Rendering Paginated Universities
-      renderPaginatedUniversities();
+        tabContent.innerHTML = `
+            <h2>Universities in ${data.profileInfo.country}</h2>
+            <div class="university-controls">
+              <input type="search" class="search-input" placeholder="Search universities..." />
+              <button class="btn btn--sort">Sort A-Z</button>
+            </div>
+            <div class="university-table-container"></div>
+          `;
+        renderPaginatedUniversities();
+      } else {
+        renderDynamicContent(apiData);
+      }
     } catch (err) {
-      tabContent.innerHTML = `<p>Error loading universities: ${err.message}</p>`;
+      tabContent.innerHTML = `<p>Error loading data: ${err.message}</p>`;
     }
-  } else if (tabIndex === 2 || tabIndex === 3) {
-    tabContent.classList.add("placeholder__content");
-    tabContent.innerHTML = `
-      <h2>Coming Soon!</h2>
-      <p>Content for this tab will be added soon. Stay tuned!</p>
-    `;
+  } else if (tabIndex === 0) {
+    renderProfileContent();
+  } else {
+    tabContent.innerHTML = `<h2>Coming Soon!</h2>`;
   }
 };
 
@@ -258,6 +285,24 @@ const renderUniversityTable = function (universities) {
   tableContainer.innerHTML = tableMarkup;
 };
 
+const sortUniversities = function () {
+  data.filteredUniversities.sort((a, b) => {
+    const nameA = a.name.toLowerCase();
+    const nameB = b.name.toLowerCase();
+    return data.sortAscending
+      ? nameA.localeCompare(nameB)
+      : nameB.localeCompare(nameA);
+  });
+
+  data.sortAscending = !data.sortAscending;
+
+  const sortButton = document.querySelector(".btn--sort");
+  sortButton.textContent = data.sortAscending ? "Sort A-Z" : "Sort Z-A";
+
+  data.currentPage = 1;
+  renderPaginatedUniversities();
+};
+
 const attachUniversityEventListeners = function () {
   const sortButton = document.querySelector(".btn--sort");
   const prevButton = document.querySelector(".btn--prev");
@@ -269,6 +314,13 @@ const attachUniversityEventListeners = function () {
   const maxPage = Math.ceil(
     data.filteredUniversities.length / data.itemsPerPage
   );
+
+  // Remove existing event listeners
+  const newSortButton = sortButton.cloneNode(true);
+  sortButton.parentNode.replaceChild(newSortButton, sortButton);
+
+  // Add new event listener for sort
+  newSortButton.addEventListener("click", sortUniversities);
 
   // Search functionality
   searchInput.addEventListener("input", function () {
@@ -310,31 +362,6 @@ const attachUniversityEventListeners = function () {
       data.currentPage = maxPage;
       renderPaginatedUniversities();
     }
-  });
-
-  // Sort Universities
-
-  const sortUniversities = function () {
-    data.filteredUniversities.sort((a, b) => {
-      if (a.name.toLowerCase() < b.name.toLowerCase())
-        return data.sortAscending ? -1 : 1;
-      if (a.name.toLowerCase() > b.name.toLowerCase())
-        return data.sortAscending ? 1 : -1;
-      return 0;
-    });
-
-    data.sortAscending = !data.sortAscending; // Toggle the sort order
-
-    document.querySelector(".btn--sort").textContent = data.sortAscending
-      ? "Sort A-Z"
-      : "Sort Z-A";
-
-    data.currentPage = 1;
-    renderPaginatedUniversities();
-  };
-
-  sortButton.addEventListener("click", function () {
-    sortUniversities();
   });
 };
 
