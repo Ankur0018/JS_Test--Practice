@@ -154,18 +154,16 @@
   .tab__item {
     padding: 8px 16px;
   }
-
-  .pagination {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.5rem;
-  }
 }
 
 /* Mobile Phones */
 @media screen and (max-width: 48rem) {
   .container {
     padding: 1rem;
+  }
+
+  .btn--sort {
+    font-size: 0.65rem;
   }
 
   .header {
@@ -178,7 +176,6 @@
   }
 
   .tab__list {
-    // flex-direction: column;
     width: 100%;
   }
 
@@ -186,6 +183,7 @@
     width: 100%;
     text-align: center;
     padding: 1rem;
+    font-size: 1.2rem;
   }
 
   .university-controls {
@@ -198,6 +196,7 @@
 
   .university-table td,
   .university-table th {
+    font-size: 1.3rem;
     padding: 8px;
   }
 
@@ -207,18 +206,16 @@
 
   .pagination .btn {
     padding: 6px 12px;
-    font-size: 0.85rem;
-  }
-
-  .page_count {
-    width: 100%;
-    text-align: center;
-    margin: 0.5rem 0;
+    font-size: 1rem;
   }
 }
 
 /* Very Small Devices */
-@media screen and (max-width: 32rem) {
+@media screen and (max-width: 40rem) {
+  html {
+    font-size: 60%;
+  }
+
   .brief__img {
     width: 8rem;
     height: 8rem;

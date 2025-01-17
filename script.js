@@ -29,12 +29,15 @@ const config = {
     },
     {
       name: "tab-5",
+      api: "https://randomuser.me/api/",
     },
   ],
 };
 
 const data = {};
 data.sortAscending = true;
+
+let isFetching = false;
 
 const timeout_sec = 10;
 
@@ -64,7 +67,7 @@ const getJSON = async function (url) {
 
 const renderSpinner = function (parentEl) {
   const markup = `
-    <div class="loader__container">
+    <div class="loader-container">
       <div class="loader"></div>
     </div>
   `;
@@ -114,6 +117,7 @@ const loadData = async function () {
 console.log(data);
 
 const renderTabs = function () {
+  tabList.innerHTML = "";
   const tabListMarkup = config.tabs
     .map(
       (tab, i) =>
@@ -127,15 +131,33 @@ const renderTabs = function () {
   tabList.insertAdjacentHTML("afterbegin", tabListMarkup);
 };
 
+// const switchTab = async function (e) {
+//   const tab = e.target.closest(".tab__item");
+//   if (!tab) return;
+
+//   Array.from(tabList.children).forEach((t) => t.classList.remove("active"));
+//   tab.classList.add("active");
+
+//   const tabIndex = +tab.dataset.index;
+//   await renderContent(tabIndex);
+// };
+
 const switchTab = async function (e) {
   const tab = e.target.closest(".tab__item");
-  if (!tab) return;
+  if (!tab || isFetching) return;
 
+  // Activate the selected tab visually
   Array.from(tabList.children).forEach((t) => t.classList.remove("active"));
   tab.classList.add("active");
 
   const tabIndex = +tab.dataset.index;
+
+  isFetching = true;
   await renderContent(tabIndex);
+  isFetching = false;
+
+  // Force UI to update after data load
+  forceUIUpdate();
 };
 
 const renderProfileContent = function () {
@@ -173,38 +195,91 @@ const renderDynamicContent = function (apiData) {
   }
 };
 
+const forceUIUpdate = () => {
+  tabList.removeEventListener("click", switchTab);
+  tabList.addEventListener("click", switchTab);
+};
+
+// const renderContent = async function (tabIndex) {
+//   const selectedTab = config.tabs[tabIndex];
+
+//   tabContent.innerHTML = ""; // Clear content
+//   renderSpinner(tabContent);
+
+//   if (selectedTab.api) {
+//     let apiUrl = selectedTab.api;
+
+//     if (tabIndex === 1) {
+//       apiUrl = apiUrl.replace(
+//         "SELECTED_USER_COUNTRY",
+//         data.profileInfo.country
+//       );
+//     }
+
+//     try {
+//       const apiData = await getJSON(apiUrl);
+
+//       if (tabIndex === 1) {
+//         data.universities = apiData;
+//         data.filteredUniversities = apiData;
+//         data.currentPage = 1;
+//         data.itemsPerPage = 10;
+
+//         tabContent.innerHTML = `
+//                     <h2>Universities in ${data.profileInfo.country}</h2>
+//                     <div class="university-controls">
+//                         <input type="search" class="search-input" placeholder="Search universities..." />
+//                         <button class="btn btn--sort">Sort A-Z</button>
+//                     </div>
+//                     <div class="university-table-container"></div>
+//                 `;
+//         renderPaginatedUniversities();
+//       } else {
+//         renderDynamicContent(apiData);
+//       }
+//     } catch (err) {
+//       tabContent.innerHTML = `<p>Error loading data: ${err.message}</p>`;
+//     }
+//   } else if (tabIndex === 0) {
+//     renderProfileContent();
+//   } else {
+//     tabContent.innerHTML = `<h2>Coming Soon!</h2>`;
+//   }
+// };
+
 const renderContent = async function (tabIndex) {
   const selectedTab = config.tabs[tabIndex];
+
+  tabContent.innerHTML = ""; // Clear content
   renderSpinner(tabContent);
 
   if (selectedTab.api) {
-    const apiUrl = selectedTab.api;
+    let apiUrl = selectedTab.api;
+
+    if (tabIndex === 1) {
+      apiUrl = apiUrl.replace(
+        "SELECTED_USER_COUNTRY",
+        data.profileInfo.country
+      );
+    }
 
     try {
-      let apiData = await getJSON(apiUrl);
+      const apiData = await getJSON(apiUrl);
 
       if (tabIndex === 1) {
-        const apiUrl = selectedTab.api.replace(
-          "SELECTED_USER_COUNTRY",
-          data.profileInfo.country
-        );
-
-        apiData = await getJSON(apiUrl);
-
-        // University-specific rendering
         data.universities = apiData;
         data.filteredUniversities = apiData;
         data.currentPage = 1;
         data.itemsPerPage = 10;
 
         tabContent.innerHTML = `
-            <h2>Universities in ${data.profileInfo.country}</h2>
-            <div class="university-controls">
-              <input type="search" class="search-input" placeholder="Search universities..." />
-              <button class="btn btn--sort">Sort A-Z</button>
-            </div>
-            <div class="university-table-container"></div>
-          `;
+                    <h2>Universities in ${data.profileInfo.country}</h2>
+                    <div class="university-controls">
+                        <input type="search" class="search-input" placeholder="Search universities..." />
+                        <button class="btn btn--sort">Sort A-Z</button>
+                    </div>
+                    <div class="university-table-container"></div>
+                `;
         renderPaginatedUniversities();
       } else {
         renderDynamicContent(apiData);
@@ -217,8 +292,86 @@ const renderContent = async function (tabIndex) {
   } else {
     tabContent.innerHTML = `<h2>Coming Soon!</h2>`;
   }
+
+  // Force UI update after loading content
+  forceUIUpdate();
 };
 
+const attachUniversityEventListeners = function () {
+  const sortButton = document.querySelector(".btn--sort");
+  const prevButton = document.querySelector(".btn--prev");
+  const nextButton = document.querySelector(".btn--next");
+  const firstButton = document.querySelector(".btn--first");
+  const lastButton = document.querySelector(".btn--last");
+  const searchInput = document.querySelector(".search-input");
+  const maxPage = Math.ceil(
+    data.filteredUniversities.length / data.itemsPerPage
+  );
+
+  // Null checks for buttons
+  if (sortButton) {
+    sortButton.removeEventListener("click", sortUniversities);
+    sortButton.addEventListener("click", sortUniversities);
+  }
+
+  // Debounced Search Input
+  if (searchInput) {
+    searchInput.removeEventListener("input", handleSearch);
+    searchInput.addEventListener("input", handleSearch);
+  }
+
+  // Pagination Buttons with null checks
+  if (prevButton) {
+    prevButton.onclick = () => {
+      if (data.currentPage > 1) {
+        data.currentPage--;
+        renderPaginatedUniversities();
+      }
+    };
+  }
+
+  if (nextButton) {
+    nextButton.onclick = () => {
+      if (data.currentPage < maxPage) {
+        data.currentPage++;
+        renderPaginatedUniversities();
+      }
+    };
+  }
+
+  if (firstButton) {
+    firstButton.onclick = () => {
+      data.currentPage = 1;
+      renderPaginatedUniversities();
+    };
+  }
+
+  if (lastButton) {
+    lastButton.onclick = () => {
+      data.currentPage = maxPage;
+      renderPaginatedUniversities();
+    };
+  }
+};
+
+// Search Handler
+const handleSearch = function () {
+  const query = document.querySelector(".search-input").value.toLowerCase();
+
+  // Avoid unnecessary filtering when input is empty
+  if (!query.trim()) {
+    data.filteredUniversities = data.universities;
+  } else {
+    data.filteredUniversities = data.universities.filter((uni) =>
+      uni.name.toLowerCase().includes(query)
+    );
+  }
+
+  data.currentPage = 1;
+  renderPaginatedUniversities();
+};
+
+// Safeguard Pagination Button State Updates
 const renderPaginatedUniversities = function () {
   const start = (data.currentPage - 1) * data.itemsPerPage;
   const end = start + data.itemsPerPage;
@@ -227,17 +380,22 @@ const renderPaginatedUniversities = function () {
     data.filteredUniversities.length / data.itemsPerPage
   );
 
-  // Rendering specific quantity of university in table
   renderUniversityTable(universitiesSliced);
 
-  // Updated button states
-  document.querySelector(".btn--prev").disabled = data.currentPage == 1;
-  document.querySelector(".btn--first").disabled = data.currentPage == 1;
-  document.querySelector(".btn--next").disabled = data.currentPage == maxPage;
-  document.querySelector(".btn--last").disabled = data.currentPage == maxPage;
+  // Null check for pagination buttons
+  const prevButton = document.querySelector(".btn--prev");
+  const nextButton = document.querySelector(".btn--next");
+  const firstButton = document.querySelector(".btn--first");
+  const lastButton = document.querySelector(".btn--last");
 
-  // University_content event listeners
-  attachUniversityEventListeners();
+  if (prevButton && nextButton && firstButton && lastButton) {
+    prevButton.disabled = data.currentPage === 1;
+    firstButton.disabled = data.currentPage === 1;
+    nextButton.disabled = data.currentPage === maxPage;
+    lastButton.disabled = data.currentPage === maxPage;
+  }
+
+  attachUniversityEventListeners(); // Reattach after rendering
 };
 
 const renderUniversityTable = function (universities) {
@@ -303,73 +461,17 @@ const sortUniversities = function () {
   renderPaginatedUniversities();
 };
 
-const attachUniversityEventListeners = function () {
-  const sortButton = document.querySelector(".btn--sort");
-  const prevButton = document.querySelector(".btn--prev");
-  const nextButton = document.querySelector(".btn--next");
-  const firstButton = document.querySelector(".btn--first");
-  const lastButton = document.querySelector(".btn--last");
-  const searchInput = document.querySelector(".search-input");
-
-  const maxPage = Math.ceil(
-    data.filteredUniversities.length / data.itemsPerPage
-  );
-
-  // Remove existing event listeners
-  const newSortButton = sortButton.cloneNode(true);
-  sortButton.parentNode.replaceChild(newSortButton, sortButton);
-
-  // Add new event listener for sort
-  newSortButton.addEventListener("click", sortUniversities);
-
-  // Search functionality
-  searchInput.addEventListener("input", function () {
-    const query = searchInput.value.toLowerCase();
-    data.filteredUniversities = data.universities.filter((uni) =>
-      uni.name.toLowerCase().includes(query)
-    );
-    data.currentPage = 1; // Reset to first page after search
-    renderPaginatedUniversities();
-  });
-
-  // Previous button
-  prevButton.addEventListener("click", function () {
-    if (data.currentPage > 1) {
-      data.currentPage--;
-      renderPaginatedUniversities();
-    }
-  });
-
-  // Next button
-  nextButton.addEventListener("click", function () {
-    if (data.currentPage < maxPage) {
-      data.currentPage++;
-      renderPaginatedUniversities();
-    }
-  });
-
-  // First page button
-  firstButton.addEventListener("click", function () {
-    if (data.currentPage !== 1) {
-      data.currentPage = 1;
-      renderPaginatedUniversities();
-    }
-  });
-
-  // Last page button
-  lastButton.addEventListener("click", function () {
-    if (data.currentPage !== maxPage) {
-      data.currentPage = maxPage;
-      renderPaginatedUniversities();
-    }
-  });
-};
-
 const init = async function () {
+  if (window._initialized) return;
+  window._initialized = true;
+
   await loadData();
   renderTabs();
   tabList.addEventListener("click", switchTab);
   await renderContent(0);
+
+  // Force UI update on load
+  forceUIUpdate();
 };
 
 init();
